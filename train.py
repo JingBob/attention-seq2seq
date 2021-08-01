@@ -245,7 +245,7 @@ if __name__ == '__main__':
     attn_decoder1 = AttnDecoderRNN(hidden_size, output_lang.n_words, dropout_p=0.1).to(device)
 
     # 75000,5000
-    trainIters(encoder1, attn_decoder1, 5000, print_every=100)
+    trainIters(encoder1, attn_decoder1, 75000, print_every=5000)
     evaluateRandomly(encoder1, attn_decoder1)
     # 注意力可视化
     output_words, attentions = evaluate(

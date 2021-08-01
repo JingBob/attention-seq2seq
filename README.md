@@ -8,3 +8,9 @@ python3.8
 ***
 ### how to use?
 Just execute train.py
+***
+### Results
+1. train loss
+![img.png](img.png)
+2. attention matrix
+![img_1.png](img_1.png)![img_2.png](img_2.png)
