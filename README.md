@@ -10,7 +10,7 @@ python3.8
 Just execute train.py
 ***
 ### Results
-1. train loss
+1. train loss <br>
 ![img.png](img.png)
-2. attention matrix
+2. attention matrix <br>
 ![img_1.png](img_1.png)![img_2.png](img_2.png)
