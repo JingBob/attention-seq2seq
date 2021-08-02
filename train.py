@@ -2,20 +2,17 @@ import torch
 import torch.nn as nn
 from torch import optim
 from datapre import prepareData
+# 导入一些规定的变量
+from datapre import MAX_LENGTH, SOS_token, EOS_token
 import random
 from util import timeSince, showPlot
 from seq2seq_model import EncoderRNN, AttnDecoderRNN
-import matplotlib.ticker as ticker
+from evaluate import evaluateRandomly, evaluate, showAttention, tensorsFromPair
 import matplotlib.pyplot as plt
 import time
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# 需要每个单词的唯一索引用作以后网络的输入和目标。
-SOS_token = 0
-EOS_token = 1
-# 规定句子的最大长度
-MAX_LENGTH = 10
 
 '''
 训练:
@@ -25,26 +22,6 @@ MAX_LENGTH = 10
 
 input_lang, output_lang, pairs = prepareData('eng', 'fra', True)
 print(random.choice(pairs))
-
-
-# 获取句子中每个单词的索引，返回的是索引序列
-def indexesFromSentence(lang, sentence):
-    return [lang.word2index[word] for word in sentence.split(' ')]
-
-
-# 根据索引序列建立张量
-def tensorFromSentence(lang, sentence):
-    indexes = indexesFromSentence(lang, sentence)
-    indexes.append(EOS_token)
-    return torch.tensor(indexes, dtype=torch.long, device=device).view(-1, 1)
-
-
-# 输入张量是输入句子中单词的索引，输出张量是目标句子中单词的索引
-def tensorsFromPair(pair):
-    input_tensor = tensorFromSentence(input_lang, pair[0])
-    target_tensor = tensorFromSentence(output_lang, pair[1])
-    return (input_tensor, target_tensor)
-
 
 teacher_forcing_ratio = 0.5
 
@@ -113,13 +90,6 @@ def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, deco
 
 
 '''
-整个训练过程：
-1.启动计时器
-2.初始化优化器和标准
-3.创建一组训练对
-4.开始绘制损失数组
-'''
-'''
 @函数名：迭代训练
 @参数说明：
     encoder：编码器
@@ -128,6 +98,11 @@ def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, deco
     print_every：多少代输出一次训练信息
     plot_every：多少代绘制一下图
     learning_rate：学习率
+@整个训练过程：
+    1.启动计时器
+    2.初始化优化器和标准
+    3.创建一组训练对
+    4.开始绘制损失数组
 '''
 def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, learning_rate=0.01):
     start = time.time()
@@ -138,7 +113,7 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
     # 优化器用SGD
     encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
     decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
-    training_pairs = [tensorsFromPair(random.choice(pairs))
+    training_pairs = [tensorsFromPair(input_lang, output_lang, random.choice(pairs))
                       for i in range(n_iters)]
     # 因为模型的输出已经进行了log和softmax，因此这里损失韩式只用NLL，三者结合起来就算二元交叉熵损失
     criterion = nn.NLLLoss()
@@ -167,72 +142,8 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
     showPlot(plot_losses)
 
 
-# 评估
-def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
-    with torch.no_grad():
-        input_tensor = tensorFromSentence(input_lang, sentence)
-        input_length = input_tensor.size()[0]
-        encoder_hidden = encoder.initHidden()
-
-        encoder_outputs = torch.zeros(max_length, encoder.hidden_size, device=device)
-
-        for ei in range(input_length):
-            encoder_output, encoder_hidden = encoder(input_tensor[ei], encoder_hidden)
-            encoder_outputs[ei] += encoder_output[0, 0]
-
-        decoder_input = torch.tensor([[SOS_token]], device=device)  # SOS
-        decoder_hidden = encoder_hidden
-        decoded_words = []
-        decoder_attentions = torch.zeros(max_length, max_length)
-
-        for di in range(max_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(
-                decoder_input, decoder_hidden, encoder_outputs)
-            decoder_attentions[di] = decoder_attention.data
-            topv, topi = decoder_output.data.topk(1)
-            if topi.item() == EOS_token:
-                decoded_words.append('<EOS>')
-                break
-            else:
-                decoded_words.append(output_lang.index2word[topi.item()])
-
-            decoder_input = topi.squeeze().detach()
-
-        return decoded_words, decoder_attentions[:di + 1]
-
-
-def evaluateRandomly(encoder, decoder, n=10):
-    for i in range(n):
-        pair = random.choice(pairs)
-        print('>', pair[0])
-        print('=', pair[1])
-        output_words, attentions = evaluate(encoder, decoder, pair[0])
-        output_sentence = ' '.join(output_words)
-        print('<', output_sentence)
-        print('')
-
-
-def showAttention(input_sentence, output_words, attentions):
-    # Set up figure with colorbar
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    cax = ax.matshow(attentions.numpy(), cmap='bone')
-    fig.colorbar(cax)
-
-    # Set up axes
-    ax.set_xticklabels([''] + input_sentence.split(' ') +
-                       ['<EOS>'], rotation=90)
-    ax.set_yticklabels([''] + output_words)
-
-    # Show label at every tick
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
-    ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
-    plt.show()
-
-
 def evaluateAndShowAttention(input_sentence):
-    output_words, attentions = evaluate(
-        encoder1, attn_decoder1, input_sentence)
+    output_words, attentions = evaluate(input_lang, output_lang, encoder1, attn_decoder1, input_sentence)
     print('input =', input_sentence)
     print('output =', ' '.join(output_words))
     showAttention(input_sentence, output_words, attentions)
@@ -246,7 +157,7 @@ if __name__ == '__main__':
 
     # 75000,5000
     trainIters(encoder1, attn_decoder1, 75000, print_every=5000)
-    evaluateRandomly(encoder1, attn_decoder1)
+    evaluateRandomly(pairs, encoder1, attn_decoder1)
     # 注意力可视化
     output_words, attentions = evaluate(
         encoder1, attn_decoder1, "je suis trop froid .")

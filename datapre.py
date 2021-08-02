@@ -9,9 +9,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # 需要每个单词的唯一索引用作以后网络的输入和目标。
 SOS_token = 0
 EOS_token = 1
+# 规定句子的最大长度
+MAX_LENGTH = 10
 
-
-# 用一个名为的辅助类Lang
+# 用一个名为Lang的辅助类
 # 包含 word → index ( word2index) 和 index → word ( index2word) 字典，以及每个单词的计数word2count，
 # 稍后将用于替换稀有单词。
 class Lang:
