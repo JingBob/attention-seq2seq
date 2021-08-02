@@ -1,15 +1,15 @@
+import random
+import time
+import os
 import torch
 import torch.nn as nn
 from torch import optim
 from datapre import prepareData
 # 导入一些规定的变量
 from datapre import MAX_LENGTH, SOS_token, EOS_token
-import random
 from util import timeSince, showPlot
 from seq2seq_model import EncoderRNN, AttnDecoderRNN
 from evaluate import evaluateRandomly, evaluate, showAttention, tensorsFromPair
-import matplotlib.pyplot as plt
-import time
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -109,6 +109,7 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
     plot_losses = []
     print_loss_total = 0  # Reset every print_every
     plot_loss_total = 0  # Reset every plot_every
+    former_loss = 9999
 
     # 优化器用SGD
     encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
@@ -134,6 +135,15 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
             print('epoch:%d  %s (%d%%) loss:%.4f' % (iter, timeSince(start, iter / n_iters),
                                           iter / n_iters * 100, print_loss_avg))
 
+            # save the best model,and cover the original model
+            if print_loss_avg < former_loss:
+                former_loss = print_loss_avg
+                if os.path.exists("models") == False:
+                    os.mkdir("models")
+                torch.save(encoder.state_dict(), 'models\encoder.pkl')
+                torch.save(decoder.state_dict(), 'models\decoder.pkl')
+                print("save the best model successful!")
+
         if iter % plot_every == 0:
             plot_loss_avg = plot_loss_total / plot_every
             plot_losses.append(plot_loss_avg)
@@ -157,11 +167,8 @@ if __name__ == '__main__':
 
     # 75000,5000
     trainIters(encoder1, attn_decoder1, 75000, print_every=5000)
-    evaluateRandomly(pairs, encoder1, attn_decoder1)
-    # 注意力可视化
-    output_words, attentions = evaluate(
-        encoder1, attn_decoder1, "je suis trop froid .")
-    plt.matshow(attentions.numpy())
+    # 训练完随机从数据集选几个句子翻译下
+    evaluateRandomly(input_lang, output_lang, pairs, encoder1, attn_decoder1)
 
     # 输入一些句子测试下
     evaluateAndShowAttention("elle a cinq ans de moins que moi .")

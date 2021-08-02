@@ -4,8 +4,8 @@ from datapre import MAX_LENGTH, SOS_token, EOS_token
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 # 获取句子中每个单词的索引，返回的是索引序列
 def indexesFromSentence(lang, sentence):
@@ -24,6 +24,7 @@ def tensorsFromPair(input_lang, output_lang, pair):
     input_tensor = tensorFromSentence(input_lang, pair[0])
     target_tensor = tensorFromSentence(output_lang, pair[1])
     return (input_tensor, target_tensor)
+
 
 # 评估
 def evaluate(input_lang, output_lang, encoder, decoder, sentence, max_length=MAX_LENGTH):
@@ -59,14 +60,15 @@ def evaluate(input_lang, output_lang, encoder, decoder, sentence, max_length=MAX
         return decoded_words, decoder_attentions[:di + 1]
 
 
-def evaluateRandomly(pairs, encoder, decoder, n=10):
+# 随机从数据集选n个句子进行翻译测试
+def evaluateRandomly(input_lang, output_lang, pairs, encoder, decoder, n=10):
     for i in range(n):
         pair = random.choice(pairs)
-        print('>', pair[0])
-        print('=', pair[1])
-        output_words, attentions = evaluate(encoder, decoder, pair[0])
+        print('input:', pair[0])
+        print('target:', pair[1])
+        output_words, attentions = evaluate(input_lang, output_lang, encoder, decoder, pair[0])
         output_sentence = ' '.join(output_words)
-        print('<', output_sentence)
+        print('predict', output_sentence)
         print('')
 
 
@@ -78,8 +80,7 @@ def showAttention(input_sentence, output_words, attentions):
     fig.colorbar(cax)
 
     # Set up axes
-    ax.set_xticklabels([''] + input_sentence.split(' ') +
-                       ['<EOS>'], rotation=90)
+    ax.set_xticklabels([''] + input_sentence.split(' ') + ['<EOS>'], rotation=90)
     ax.set_yticklabels([''] + output_words)
 
     # Show label at every tick
