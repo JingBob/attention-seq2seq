@@ -3,8 +3,9 @@
 ### See for details [https://blog.csdn.net/qq_42714262/article/details/119298940](https://blog.csdn.net/qq_42714262/article/details/119298940)
 ***
 ### Requirements
-pytorch1.7.1 <br>
-python3.8
+python3.8<br>
+pytorch==1.7.1 <br>
+matplotlib==3.2.2
 ***
 ### how to use?
 **1.train**<br/>
