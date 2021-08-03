@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
-from torch import optim
+from datapre import MAX_LENGTH
 import torch.nn.functional as F
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-MAX_LENGTH = 10  # 句子最大长度定义为10
+
 
 '''
 编码器:
